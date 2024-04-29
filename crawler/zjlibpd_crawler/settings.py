@@ -63,7 +63,7 @@ ROBOTSTXT_OBEY = True
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-#    "zjlibpd_crawler.pipelines.ZjlibpdCrawlerPipeline": 300,
+    #    "zjlibpd_crawler.pipelines.ZjlibpdCrawlerPipeline": 300,
     "zjlibpd_crawler.pipelines.MongoPipeline": 300,
 }
 
