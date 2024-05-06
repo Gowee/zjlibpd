@@ -62,10 +62,10 @@ ROBOTSTXT_OBEY = True
 
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
-ITEM_PIPELINES = {
-    #    "zjlibpd_crawler.pipelines.ZjlibpdCrawlerPipeline": 300,
-    "zjlibpd_crawler.pipelines.MongoPipeline": 300,
-}
+# ITEM_PIPELINES = {
+#     #    "zjlibpd_crawler.pipelines.ZjlibpdCrawlerPipeline": 300,
+#     "zjlibpd_crawler.pipelines.MongoPipeline": 300,
+# }
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/autothrottle.html
@@ -92,3 +92,5 @@ ITEM_PIPELINES = {
 REQUEST_FINGERPRINTER_IMPLEMENTATION = "2.7"
 TWISTED_REACTOR = "twisted.internet.asyncioreactor.AsyncioSelectorReactor"
 FEED_EXPORT_ENCODING = "utf-8"
+
+URLLENGTH_LIMIT = 8192
