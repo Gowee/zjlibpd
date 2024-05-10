@@ -34,7 +34,7 @@ RETRY_TIMES = 3
 CHUNK_SIZE = 4 * 1024 * 1024
 # TEMP_DIR = Path()gettempdir())
 
-USER_AGENT = "wzlibpd/0.0 (+https://github.com/gowee/wzlibpd)"
+USER_AGENT = "zjlibpdbot/0.0 (+https://github.com/gowee/zjlibpd)"
 
 # RESP_DUMP_PATH = "/tmp/wmc_upload_resp_dump.html"
 
@@ -86,12 +86,12 @@ def retry(times=RETRY_TIMES):
 
 @retry(3)
 def fetch_file(url, session=None, rproxy=None):
-    prefetched = f"../../public_html/wzlib/{sha1sum(url)}.pdf"
-    if os.path.exists(prefetched):
-        logger.info(f"Hit prefetched: {prefetched}")
-        return prefetched
-    else:
-        logger.info(f"Downloading {url}")
+    # prefetched = f"../../public_html/wzlib/{sha1sum(url)}.pdf"
+    # if os.path.exists(prefetched):
+    #     logger.info(f"Hit prefetched: {prefetched}")
+    #     return prefetched
+    # else:
+    logger.info(f"Downloading {url}")
     get = session and session.get or requests.get
     headers = {"User-Agent": USER_AGENT}
     if rproxy is None:

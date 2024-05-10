@@ -1,3 +1,4 @@
+# source: https://github.com/Gowee/wzlibpd/blob/main/uploader/_gen.py
 import json
 from pathlib import Path
 import logging
@@ -23,19 +24,45 @@ def zhhant(text):
 
 
 def construct_res_url(resid):
-    return f"https://history.zjlib.cn/app/universal-search/resource/{resid}/details?wfwfid=2120&searchId=24016&params=&pageId=107556&classifyId=&classifyName="
+    return "{{ZJLib res link|%s}}" % resid
 
 
-def construct_pdf_url(blob_id):
-    return "https://history.zjlib.cn/yz/reader/blobPdf?objectid=" + blob_id
+def construct_pdf_url(blob_id_or_reader):
+    if isinstance(blob_id_or_reader, str):
+        blob_id = blob_id_or_reader
+        return "https://history.zjlib.cn/yz/reader/blobPdf?objectid=" + blob_id
+    else:
+        reader = blob_id_or_reader
+        dir_url = reader["imgUrl"]
+        if dir_url.startswith("encodeURIComponent"):
+            dir_url = dir_url.removeprefix('encodeURIComponent("')
+            dir_url = dir_url.removesuffix('")')
+        assert dir_url.endswith("pdfImgaes/"), dir_url  # not our typo, it is imgaes!
+        dir_url = dir_url.removesuffix("pdfImgaes/")
+        dir_url += (
+            reader["readerObj"]["fileName"] + reader["readerObj"]["fileType"]
+        )  # e.g. 0001.pdf
+        assert dir_url.startswith("http")
+        return dir_url
 
 
 def sanitize_title(s):
+    s = s.strip()
     if (
         s
-        == "皇清誥授中憲大夫湖北糧儲道祖考敏齋公行狀一卷（ 林培厚行狀） 誥授中憲大夫湖北督糧道林公墓誌銘一卷（林培厚墓誌銘） 敕封文林郎林君墓誌銘一卷（林培厚墓誌銘）"
+        == "玉海二百卷 辭學指南四卷 詩考一卷 詩地理考六卷 漢藝文志考證十卷 通鑑地理通釋十四卷 漢制考四卷 踐阼篇集解一卷 周易鄭康成注一卷 姓氏急就篇二卷 急就篇補注四卷 周書王會補注一卷 小學紺珠十卷 六經天文篇二卷 通鑑答問五卷"
     ):
-        return "皇清誥授中憲大夫湖北糧儲道祖考敏齋公行狀一卷 誥授中憲大夫湖北督糧道林公墓誌銘一卷 敕封文林郎林君墓誌銘一卷"
+        return "玉海二百卷辭學指南四卷詩考一卷詩地理考六卷漢藝文志考證十卷通鑑地理通釋十四卷漢制考四卷踐阼篇集解一卷周易鄭康成注一卷等"
+    elif (
+        s
+        == "新編事文類聚翰墨全書甲集十二卷乙集九卷丙集五卷丁集五卷戊集五卷己集七卷庚集二十四卷辛集十卷壬集十二卷癸集十一卷後甲集八卷後乙集三卷後丙集六卷後丁集八卷後戊集九卷"
+    ):
+        return "新編事文類聚翰墨全書"
+    elif (
+        s
+        == "兵部尚書恭敏薛公傳一卷；明兵部尚書贈太子太保諡恭敏青雷薛公傳一卷；故兵部尚書贈太子太保諡恭敏伯兄青雷公行狀一卷；明兵部尚書贈太子太保諡恭敏青雷薛公墓誌銘一卷；文武官員祭恭敏公奠稿一卷"
+    ):
+        return "兵部尚書恭敏薛公傳一卷等"
     s = (
         s.strip()
         .replace("[", "")
@@ -49,40 +76,12 @@ def sanitize_title(s):
 
 
 def categorize(title, recursive=True):
-    if "過來語" in title:
-        return ["過來語"]
-    if "利濟學堂" in title and "匯" in title:
-        return ["利濟學堂扱匯"]
-    if "瑞安縣誌稿" in title:
-        return ["瑞安縣誌稿"]
-    if "蛻庵日札" in title:
-        return ["蛻庵日札"]
-    if "uian縣立簡易師範學校同學錄" in title:
-        return ["瑞安縣立簡易師範學校同學錄"]
-    if "符笑拈日記" in title:
-        return ["符笑拈日記"]
-    if "范氏奇書" in title:
-        return ["范氏奇書"]
-    if "浙江省均賦問題" in title:
-        return ["浙江省均賦問題"]
-    if "整理土地三計劃" in title:
-        return ["整理土地三計劃"]
-    if "【麗岙街道葉宅村】潁川郡陳氏宗譜 麗岙" in title:
-        return ["麗岙街道葉宅村", "潁川郡陳氏宗譜"]
-    if re.search(r"^蠡.日.", title):
-        return ["蠡傭日劄"]
-    if re.search("^暖姝室日.", title):
-        return ["暖姝室日劄"]
-    if re.search("^翳彗.[齋斋]", title):
-        return ["翳彗旍齋日劄"]
-    if re.search("^種瓜[廬盧]日.", title):
-        return ["種瓜廬日劄"]
-    if "萬萬庵" in title:
-        return ["萬萬庵"]
-    if "蛻庵日札" in title:
-        return ["蛻庵日劄"]
-    if "知昨非斎日" in title:
-        return ["知昨非斎日劄"]
+    if "唐荊川先生纂輯武前編六卷武後編六卷" in title:
+        return ["唐荊川先生纂輯武編"]
+    if "唐荊川先生編纂左氏始末" in title:
+        return ["唐荊川先生編纂左氏始末"]
+    if "甲乙集" in title:
+        return ["甲乙集"]
     cats = []
 
     basename = title
@@ -122,13 +121,14 @@ def categorize(title, recursive=True):
     basename = basename.replace("中期", "\ueeee中\ueeee期\ueeee")
     basename = basename.replace("中學", "\ueeef中\ueeef學\ueeef")
     basename = basename.replace("小學", "\ueef0小\ueef0學\ueef0")
+    basename = basename.replace("始末", "\ueef1始\ueef1末\ueef1")
     basename_ = re.sub(
-        r"[-：.·]?\s*([第新]?([零〇一二三四五六七八九十廿卅卌百千萬佰仟壹兩貳叄叄肆伍陸柒捌玖拾□上中下前後首末至\-.、，；]+|[0-9至\-.、，；]+)|不分)[期冊卷捲集輯號回篇出].*$",
+        r"[-：.·]?\s*([第新]?([零〇一二三四五六七八九十廿卅卌百千佰仟壹兩貳叄叄肆伍陸柒捌玖拾□囗上中下前後首末至甲乙丙丁\-.、，；]+|[0-9至\-.、，；]+)|不分)[期冊卷捲集輯號回篇出種].*$",
         "",
         basename,
     )
     m = re.search(
-        r"[-：.·]?\s*(?P<V>[期冊卷捲集輯號回篇出])之?([零〇一二三四五六七八九十廿卅卌百千萬佰仟壹兩貳叄叄肆伍陸柒捌玖拾□上中下前後首末至\-.、，；]+|[0-9至\-.、，；]+)(?P<T>.*)$",
+        r"[-：.·]?\s*(?P<V>[期冊卷捲集輯號回篇出])之?([零〇一二三四五六七八九十廿卅卌百千佰仟壹兩貳叄叄肆伍陸柒捌玖拾□囗上中下前後首末至\-.、，；]+|[0-9至\-.、，；]+)(?P<T>.*)$",
         basename,
     )
     if (
@@ -156,6 +156,7 @@ def categorize(title, recursive=True):
     basename = basename.replace("\ueeee中\ueeee期\ueeee", "中期")
     basename = basename.replace("\ueeef中\ueeef學\ueeef", "中學")
     basename = basename.replace("\ueef0小\ueef0學\ueef0", "小學")
+    basename = basename.replace("\ueef1始\ueef1末\ueef1", "始末")
     basename = re.sub(
         r"\s+民國([一二三四五六七八九十廿卅卌百千萬佰仟壹貳叄叄肆伍陸柒捌玖拾至]+|[0-9至]+)年.*$",
         "",
@@ -213,26 +214,16 @@ def categorize(title, recursive=True):
 
 
 def generate_category_wikitext(cat):
-    if "街道" in cat or "澤雅鎮周岙" in cat:
-        return (
-            """{{Wikidata Infobox}}
-{{zh|%s}}
-
-[[Category:County-level divisions of Wenzhou]]
-"""
-            % cat
-        )
-    else:
-        return (
-            """\
+    return (
+        """\
 {{Wikidata Infobox}}
 {{Category for book|zh}}
 {{zh|%s}}
 
 [[Category:Chinese-language books by title]]
 """
-            % cat
-        )
+        % cat
+    )
 
 
 def gen_toc(reader, indent=0):
@@ -253,8 +244,8 @@ def _gen_toc(section, indent=0):
     else:
         link = f"{{{{PDF page link|page={section['page']}|text={section['title']}}}}}"
         if subs := section.get("subChapters"):
-            toc = indentation + f"<li>{link}\n"
-            toc += _gen_toc(subs, indent) + "</li>\n"
+            toc = indentation + f"<li>{link}"
+            toc += _gen_toc(subs, indent).lstrip() + "</li>"
         else:
             toc = "  " * indent + f"<li>{link}</li>"
         return toc
@@ -263,3 +254,16 @@ def _gen_toc(section, indent=0):
 def extract_blob_id(reader):
     dir_url = reader["imgUrl"]
     return re.search(r"/([a-zA-Z0-9-]+)/pdfImgaes", dir_url).group(1)
+
+
+def gen_attr_fields(attrs, suffix="attr-"):
+    # for k,v in attrs.items():
+    #     if isinstance(v, list):
+    #         assert "獲取方式" == k, f"{k} {v}"
+    #     elif isinstance(v, (dict, bool)):
+    #         assert False, f"{k} {v}"
+    return {
+        f"{suffix}{k}": v
+        for k, v in attrs.items()
+        if isinstance(v, (str, int, float, bool, type(None)))
+    }
