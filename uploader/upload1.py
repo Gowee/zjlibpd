@@ -197,7 +197,7 @@ def main():
         """Log to the local and the remote at the same time"""
         logger.log(level=local_level, msg=l, exc_info=exc_info)
 
-        l = re.sub(r"[-a-zA-Z0-9]+\.trycloudflare\.com", "", l)  # mask RPROXY domain
+        l = re.sub(r"[-a-zA-Z0-9.]+\.(trycloudflare\.com|workers\.dev)", "", l)  # mask RPROXY domain
         d = str(datetime.datetime.now(datetime.timezone.utc))
         wikitext = ""
         wikitext = logpage.text
