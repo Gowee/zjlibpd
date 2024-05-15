@@ -176,6 +176,8 @@ def main():
                     url = construct_pdf_url(reader)
                 case (blob_id, subs) if isinstance(subs, list):
                     # the blob file spans over multiple resources
+                    fields["nth"] = i + 1
+                    fields["total"] = len(vols)
                     for ii, sub in enumerate(
                         filter(lambda sub: sub["__ATTRS__"]["類型"] == "卷", subs)
                     ):
@@ -215,8 +217,8 @@ def main():
                 )
                 counts[-1] += 1
                 # fmt: off
-                booknav_wikitext = f"\n{{{{ZJLibBookNaviBar|prev={prev_filename or ""}|next={next_filename or ""}|parentresid={item['id']}|nth={i+1}|total={len(vols)}}}}}\n"
-            wikitext = f"""=={{{{int:filedesc}}}}==\
+                booknav_wikitext = f"{{{{ZJLibBookNaviBar|prev={prev_filename or ""}|next={next_filename or ""}|parentresid={item['id']}|nth={i+1}|total={len(vols)}}}}}\n"
+            wikitext = f"""=={{{{int:filedesc}}}}==
 {booknav_wikitext}\
 {{{{Book in the Zhejiang Library
 {fields_wikitext}

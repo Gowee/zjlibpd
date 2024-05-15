@@ -43,6 +43,8 @@ def construct_pdf_url(blob_id_or_reader):
             reader["readerObj"]["fileName"] + reader["readerObj"]["fileType"]
         )  # e.g. 0001.pdf
         assert dir_url.startswith("http")
+        if "54290817-8134-4455-bbed-a02185cfa587" in dir_url:
+            dir_url = dir_url.replace(" (2)", "") # for no reason
         return dir_url
 
 
@@ -122,6 +124,7 @@ def categorize(title, recursive=True):
     basename = basename.replace("中學", "\ueeef中\ueeef學\ueeef")
     basename = basename.replace("小學", "\ueef0小\ueef0學\ueef0")
     basename = basename.replace("始末", "\ueef1始\ueef1末\ueef1")
+    basename = basename.replace("本末", "\ueef2始\ueef2末\ueef2")
     basename_ = re.sub(
         r"[-：.·]?\s*([第新]?([零〇一二三四五六七八九十廿卅卌百千佰仟壹兩貳叄叄肆伍陸柒捌玖拾□囗上中下前後首末至甲乙丙丁\-.、，；]+|[0-9至\-.、，；]+)|不分)[期冊卷捲集輯號回篇出種].*$",
         "",
@@ -157,6 +160,7 @@ def categorize(title, recursive=True):
     basename = basename.replace("\ueeef中\ueeef學\ueeef", "中學")
     basename = basename.replace("\ueef0小\ueef0學\ueef0", "小學")
     basename = basename.replace("\ueef1始\ueef1末\ueef1", "始末")
+    basename = basename.replace("\ueef2始\ueef2末\ueef2", "本末")
     basename = re.sub(
         r"\s+民國([一二三四五六七八九十廿卅卌百千萬佰仟壹貳叄叄肆伍陸柒捌玖拾至]+|[0-9至]+)年.*$",
         "",
@@ -267,3 +271,10 @@ def gen_attr_fields(attrs, suffix="attr-"):
         for k, v in attrs.items()
         if isinstance(v, (str, int, float, bool, type(None)))
     }
+
+# def stp(val):
+#     """Safe template param"""
+#     if val is None:
+#         return None
+#     return val.replace("[[", "[-{}-[")
+
