@@ -65,10 +65,10 @@ def main():
             ]
             if len(vols) == 1:
                 # (re.search(r"objectid=([\w-]+)($|&)", reader[0]).group(1)
-                vols = [(f"ZJLib-{item['id']} {title}.pdf", vols[0])]
+                vols = [(f"ZJLib-{item['id']} {sanitized_title}.pdf", vols[0])]
             else:
                 vols = [
-                    (f"ZJLib-{item['id']}-{i+1} {title} 第{ii+1}冊.pdf", vol)
+                    (f"ZJLib-{item['id']}-{i+1} {sanitized_title} 第{ii+1}冊.pdf", vol)
                     for ii, vol in enumerate(vols)
                 ]
         else:
