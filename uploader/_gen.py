@@ -44,7 +44,7 @@ def construct_pdf_url(blob_id_or_reader):
         )  # e.g. 0001.pdf
         assert dir_url.startswith("http")
         if "54290817-8134-4455-bbed-a02185cfa587" in dir_url:
-            dir_url = dir_url.replace(" (2)", "") # for no reason
+            dir_url = dir_url.replace(" (2)", "")  # for no reason
         return dir_url
 
 
@@ -272,9 +272,9 @@ def gen_attr_fields(attrs, suffix="attr-"):
         if isinstance(v, (str, int, float, bool, type(None)))
     }
 
+
 # def stp(val):
 #     """Safe template param"""
 #     if val is None:
 #         return None
 #     return val.replace("[[", "[-{}-[")
-

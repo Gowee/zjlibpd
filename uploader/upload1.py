@@ -12,6 +12,7 @@ import re
 import sys
 from itertools import chain
 from pathlib import Path
+from urllib.parse import urlencode, urlparse, parse_qsl, urlunparse
 
 # from tempfile import gettempdir
 import datetime
@@ -64,28 +65,38 @@ def store_position(name, position):
 
 def retry(times=RETRY_TIMES):
     def wrapper(fn):
-        tried = 0
-
         @functools.wraps(fn)
         def wrapped(*args, **kwargs):
+            tried = 0
             while True:
                 try:
                     return fn(*args, **kwargs)
                 except Exception as e:
-                    nonlocal tried
                     tried += 1
-                    if tried >= times:
+                    if tried > times:
                         # raise Exception(f"Failed finally after {times} tries") from e
                         raise e
-                    logger.warning(f"Retrying {fn}", exc_info=e)
+                    logger.warning(f"Retrying {fn} {tried}/{times}", exc_info=e)
 
         return wrapped
 
     return wrapper
 
 
+# https://stackoverflow.com/a/2506477
+def rproxy_url(url, rproxy=None):
+    if rproxy is None:
+        return url
+    parts = list(urlparse(rproxy))
+    q = dict(parse_qsl(parts[4]))
+    q.update({"url": url})
+    parts[4] = urlencode(q)
+    return urlunparse(parts)
+
+
 @retry(3)
 def fetch_file(url, session=None, rproxy=None):
+    url = rproxy_url(url, rproxy)
     # prefetched = f"../../public_html/wzlib/{sha1sum(url)}.pdf"
     # if os.path.exists(prefetched):
     #     logger.info(f"Hit prefetched: {prefetched}")
@@ -94,17 +105,10 @@ def fetch_file(url, session=None, rproxy=None):
     logger.info(f"Downloading {url}")
     get = session and session.get or requests.get
     headers = {"User-Agent": USER_AGENT}
-    if rproxy is None:
-        resp = get(
-            url,
-            headers=headers,
-        )
-    else:
-        resp = get(
-            rproxy,
-            params={"url": url},
-            headers=headers,
-        )
+    resp = get(
+        url,
+        headers=headers,
+    )
     resp.raise_for_status()
     assert len(resp.content) != 0, "Got empty file"
     if "Content-Length" in resp.headers:
@@ -172,6 +176,8 @@ def main():
 
     if rproxy := os.environ.get("RPROXY"):
         logger.info("RPROXY: " + rproxy)
+    if copyupload := os.environ.get("COPYUPLOAD"):
+        logger.info("CopyUpload activated")
 
     # with open(CONFIG_FILE_PATH, "r") as f:
     #     config = yaml.safe_load(f.read())
@@ -197,7 +203,9 @@ def main():
         """Log to the local and the remote at the same time"""
         logger.log(level=local_level, msg=l, exc_info=exc_info)
 
-        l = re.sub(r"[-a-zA-Z0-9.]+\.(trycloudflare\.com|workers\.dev)", "", l)  # mask RPROXY domain
+        l = re.sub(
+            r"[-a-zA-Z0-9.]+\.(trycloudflare\.com|workers\.dev|toolforge\.org)", "", l
+        )  # mask RPROXY domain
         d = str(datetime.datetime.now(datetime.timezone.utc))
         wikitext = ""
         wikitext = logpage.text
@@ -237,15 +245,21 @@ def main():
             ):
                 assert file_url
                 try:
-                    logger.info(f"Fetching {pagename}")
-                    binary = fetch_file(file_url, rproxy=rproxy)
-                    logger.info(f"Uploading {pagename}")
+                    if copyupload:
+                        proxied_url = rproxy_url(file_url, rproxy)
+                        target = {"source_url": proxied_url}
+                        logger.info(f"Copyuploading {pagename} from {proxied_url}")
+                    else:
+                        logger.info(f"Fetching {pagename}")
+                        binary = fetch_file(file_url, rproxy=rproxy)
+                        target = {"source_filename": binary}
+                        logger.info(f"Uploading {pagename}")
 
                     @retry()
                     def do1():
                         try:
                             r = site.upload(
-                                source_filename=binary,
+                                **target,
                                 filepage=page,
                                 text=wikitext,
                                 comment=summary,
@@ -275,12 +289,22 @@ def main():
                                     page.save(
                                         summary + f" (Redirecting to [[File:{dup}]])"
                                     )
-                                os.remove(binary)
+                                if not copyupload:
+                                    os.remove(binary)
+                            elif e.code == "exists":
+                                log(
+                                    "File exists. Conflicting with another instance?",
+                                    local_level=logging.WARNING,
+                                    exc_info=e,
+                                )
+                                if not copyupload:
+                                    os.remove(binary)
                             else:
                                 raise e
                         else:
                             assert r, f"Upload failed: {r}"
-                            os.remove(binary)
+                            if not copyupload:
+                                os.remove(binary)
 
                     do1()
                 except Exception as e:
