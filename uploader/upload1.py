@@ -229,19 +229,21 @@ def main():
                 continue
             if pagename.startswith("File:"):
                 page = FilePage(site, pagename)
-                existing = False
+                # in some rare cases, the file is uploaded without creating the page
+                page_existing = page.exists()
+                file_existing = False
                 try:
                     page.get_file_url()
-                    existing = True
+                    file_existing = True
                 except pywikibot.exceptions.PageRelatedError:
                     pass
             else:
                 page = Page(site, pagename)
-                existing = page.exists()
+                page_existing = page.exists()
             if (
                 pagename.startswith("File:")
                 and not page.isRedirectPage()
-                and not existing
+                and not file_existing
             ):
                 assert file_url
                 try:
@@ -317,7 +319,7 @@ def main():
 
                 @retry()
                 def do2():
-                    if existing and update == "no":
+                    if page_existing and update == "no":
                         return
                     if update == "force" or (
                         (
@@ -332,7 +334,7 @@ def main():
                             )
                         else:
                             page.text = wikitext
-                        if existing and (
+                        if page_existing and (
                             rev := is_wikitext_modified_by_others(
                                 page, ours=(site.userinfo["id"], "SchlurcherBot")
                             )
@@ -341,7 +343,7 @@ def main():
                                 f"Updating [[:{pagename}]] that has been been modified by {rev['user']} at {rev['timestamp'].isoformat()}",
                                 logging.WARNING,
                             )
-                        page.save(summary + (" (Updating)" if existing else ""))
+                        page.save(summary + (" (Updating)" if page_existing else ""))
                     else:
                         log(
                             f"Refused to update page (stale or not-owning): [[:{pagename}]]"
