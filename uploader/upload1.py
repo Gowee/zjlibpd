@@ -83,6 +83,12 @@ def retry(times=RETRY_TIMES):
     return wrapper
 
 
+# def deredirect(url):
+#     # get url from Location header
+#     resp = requests.head(url)
+#     assert resp.status_code in (301, 302), f"Expected redirect, got {resp.status_code} from {url}"
+#     return resp.headers["Location"]
+
 # https://stackoverflow.com/a/2506477
 def rproxy_url(url, rproxy=None):
     if rproxy is None:
@@ -248,6 +254,7 @@ def main():
                 assert file_url
                 try:
                     if copyupload:
+                        # deredirect
                         proxied_url = rproxy_url(file_url, rproxy)
                         target = {"source_url": proxied_url}
                         logger.info(f"Copyuploading {pagename} from {proxied_url}")
